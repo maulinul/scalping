@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="night">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screener Scalping · IHSG Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+
+/* ═══════════════════════════════════════════════════════
+   THEMES — Only Night & Day
+═══════════════════════════════════════════════════════ */
+[data-theme="night"] {
+  --bg:#0a0e14;--bg2:#0f1520;--bg3:#141c2b;
+  --border:#1e2d45;--border2:#243550;
+  --accent:#00e5a0;--accent2:#0095ff;
+  --red:#ff4560;--yellow:#f5c842;
+  --white:#e8f0fe;--muted:#4a6080;--muted2:#6a8aaa;
+  --row-hover:rgba(0,229,160,0.04);
+  --scanline:rgba(0,229,160,0.015);
+  --glow:rgba(0,229,160,0.35);
+  --s5-bg:rgba(0,229,160,0.18);--s4-bg:rgba(0,149,255,0.15);--s3-bg:rgba(245,200,66,0.12);
+  --new-row:rgba(0,229,160,0.08);
+  --new-border:rgba(0,229,160,0.25);
+}
+[data-theme="light"] {
+  --bg:#f0f4f8;--bg2:#ffffff;--bg3:#e8eef5;
+  --border:#d0dce8;--border2:#b8cce0;
+  --accent:#0070f0;--accent2:#7c3aed;
+  --red:#dc2626;--yellow:#d97706;
+  --white:#1a2a3a;--muted:#94a3b8;--muted2:#64748b;
+  --row-hover:rgba(0,112,240,0.04);
+  --scanline:transparent;
+  --glow:rgba(0,112,240,0.25);
+  --s5-bg:rgba(0,112,240,0.1);--s4-bg:rgba(124,58,237,0.1);--s3-bg:rgba(217,119,6,0.1);
+  --new-row:rgba(0,112,240,0.06);
+  --new-border:rgba(0,112,240,0.2);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--white);font-family:'DM Sans',sans-serif;min-height:100vh;transition:background .25s,color .25s}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,var(--scanline) 2px,var(--scanline) 4px)}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;gap:14px;flex-wrap:wrap;
+  border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:100;transition:background .25s,border-color .25s}
+.logo{font-family:'Space Mono',monospace;font-size:17px;font-weight:700;letter-spacing:2px;
+  color:var(--accent);text-shadow:0 0 18px var(--glow)}
+.logo span{display:block;font-size:10px;letter-spacing:1px;color:var(--muted);font-weight:400;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+.live-badge{display:flex;align-items:center;gap:7px;border-radius:20px;padding:5px 13px;
+  font-size:11px;font-family:'Space Mono',monospace;color:var(--accent);
+  background:rgba(0,0,0,.1);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.live-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.theme-sw{display:flex;align-items:center;gap:5px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:24px;padding:4px 8px}
+.theme-sw label{font-size:10px;font-family:'Space Mono',monospace;color:var(--muted);letter-spacing:1px;margin-right:4px}
+.tdot{width:22px;height:22px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;
+  transition:transform .15s,border-color .15s;position:relative}
+.tdot:hover{transform:scale(1.2)}
+.tdot.active{border-color:var(--white);transform:scale(1.18)}
+.tdot[data-t="night"]{background:radial-gradient(circle at 35% 35%,#0095ff,#0a0e14)}
+.tdot[data-t="light"]{background:radial-gradient(circle at 35% 35%,#7c3aed,#f0f4f8)}
+.tdot::after{content:attr(title);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:3px 8px;
+  font-size:10px;font-family:'Space Mono',monospace;color:var(--white);white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s}
+.tdot:hover::after{opacity:1}
+
+main{padding:22px 28px}
+
+.input-section{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:20px;margin-bottom:18px;transition:background .25s,border-color .25s}
+.sec-label{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;
+  color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+textarea{width:100%;height:115px;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:12px;color:var(--white);font-family:'Space Mono',monospace;
+  font-size:12px;resize:vertical;outline:none;transition:border-color .2s,background .25s}
+textarea:focus{border-color:var(--accent)}
+textarea::placeholder{color:var(--muted)}
+
+.time-row{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.time-box{display:flex;align-items:center;gap:6px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:8px;padding:6px 12px}
+.time-box .tclk{font-size:14px}
+.time-inp{background:transparent;border:none;color:var(--white);font-family:'Space Mono',monospace;
+  font-size:14px;width:70px;outline:none;text-align:center;letter-spacing:1px}
+.time-inp:focus{border-bottom:1px solid var(--accent)}
+.time-mode{font-size:10px;font-family:'Space Mono',monospace;color:var(--muted);padding:2px 8px;
+  border-radius:4px;background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:all .2s}
+.time-mode:hover{border-color:var(--accent);color:var(--accent)}
+.time-mode.locked{border-color:var(--yellow);color:var(--yellow)}
+.time-hint{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace}
+
+.ic{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.btn-p{background:var(--accent);color:#000;border:none;padding:10px 22px;
+  font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;
+  border-radius:7px;cursor:pointer;text-transform:uppercase;transition:all .2s}
+.btn-p:hover{filter:brightness(1.15);box-shadow:0 0 18px var(--glow);transform:translateY(-1px)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--border);
+  padding:10px 16px;font-family:'Space Mono',monospace;font-size:11px;border-radius:7px;cursor:pointer;transition:all .2s}
+.btn-g:hover{border-color:var(--muted2);color:var(--white)}
+
+.leg-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.leg-pill{background:var(--bg3);border:1px solid var(--border);border-radius:20px;
+  padding:4px 11px;font-size:10px;font-family:'Space Mono',monospace;
+  display:flex;align-items:center;gap:5px;color:var(--muted2)}
+.pdot{width:7px;height:7px;border-radius:50%}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:16px}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:13px 15px;transition:border-color .2s,background .25s}
+.sc:hover{border-color:var(--accent)}
+.sc .v{font-family:'Space Mono',monospace;font-size:28px;font-weight:700;line-height:1}
+.sc .l{font-size:10px;color:var(--muted);margin-top:5px;letter-spacing:.4px}
+.cg{color:var(--accent)}.cb{color:var(--accent2)}.cr{color:var(--red)}.cy{color:var(--yellow)}.cm{color:var(--muted2)}
+
+.ctrl-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.fg{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.fbtn{background:var(--bg2);border:1px solid var(--border);color:var(--muted);
+  padding:6px 13px;border-radius:20px;font-size:11px;font-family:'Space Mono',monospace;cursor:pointer;transition:all .15s}
+.fbtn:hover{border-color:var(--muted2);color:var(--white)}
+.fbtn.active{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--accent);color:var(--accent)}
+.sbox{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 13px;
+  color:var(--white);font-family:'Space Mono',monospace;font-size:11px;outline:none;min-width:140px;transition:border-color .2s}
+.sbox:focus{border-color:var(--accent)}
+
+.sort-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spl{font-size:10px;font-family:'Space Mono',monospace;color:var(--muted);letter-spacing:1px;white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:6px;padding:4px 9px;
+  font-size:11px;font-family:'Space Mono',monospace;color:var(--white);cursor:pointer;transition:border-color .15s}
+.chip:hover{border-color:var(--accent)}
+.chip .cpri{background:var(--accent);color:#000;width:15px;height:15px;border-radius:3px;
+  display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.chip .cdir{color:var(--accent);font-size:13px;font-weight:700}
+.chip .cx{color:var(--muted2);cursor:pointer;font-size:13px;line-height:1;margin-left:2px;transition:color .15s}
+.chip .cx:hover{color:var(--red)}
+.chip-empty{font-size:11px;font-family:'Space Mono',monospace;color:var(--muted);font-style:italic}
+.shint{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace}
+
+.tw{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  overflow:auto;max-height:68vh;transition:background .25s,border-color .25s}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{background:var(--bg3);color:var(--muted);font-family:'Space Mono',monospace;font-size:9.5px;
+  letter-spacing:1.5px;text-transform:uppercase;padding:11px 13px;text-align:center;
+  border-bottom:1px solid var(--border);position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap;
+  transition:background .25s}
+thead th:hover{color:var(--accent)}
+thead th:first-child{text-align:left}
+thead th:nth-child(2){text-align:left}
+.snum{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#000;
+  width:14px;height:14px;border-radius:3px;font-size:8px;font-weight:700;margin-left:4px;vertical-align:middle}
+.sarr{margin-left:2px;color:var(--accent);font-size:11px}
+
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:hover{background:var(--row-hover)}
+tbody tr:last-child{border-bottom:none}
+tbody tr.rs5{border-left:3px solid var(--accent)}
+tbody tr.rs4{border-left:3px solid var(--accent2)}
+tbody tr.rs3{border-left:3px solid var(--yellow)}
+tbody tr.rs2{border-left:3px solid var(--border2)}
+tbody tr.new-row{background:var(--new-row);border-left:3px solid var(--new-border)}
+tbody tr.new-row:hover{background:color-mix(in srgb,var(--new-row) 80%,var(--row-hover))}
+td{padding:9px 13px;font-family:'Space Mono',monospace;font-size:11.5px;white-space:nowrap;text-align:center}
+td:first-child{text-align:left}
+td:nth-child(2){text-align:left}
+
+.sbadge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;font-weight:700;font-size:12px}
+.sb5{background:var(--s5-bg);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+.sb4{background:var(--s4-bg);color:var(--accent2);border:1px solid color-mix(in srgb,var(--accent2) 40%,transparent)}
+.sb3{background:var(--s3-bg);color:var(--yellow);border:1px solid color-mix(in srgb,var(--yellow) 30%,transparent)}
+.sb2{background:rgba(100,100,140,.1);color:var(--muted2);border:1px solid var(--border)}
+.sb1{background:rgba(255,69,96,.08);color:var(--red);border:1px solid rgba(255,69,96,.2)}
+
+.cg2{color:var(--accent)}.cr2{color:var(--red)}.cy2{color:var(--yellow)}.cb2{color:var(--accent2)}.cm2{color:var(--muted2)}
+
+.tag{display:inline-block;padding:2px 6px;border-radius:4px;font-size:9.5px;font-weight:700;letter-spacing:.4px;margin-left:3px}
+.tstar{background:color-mix(in srgb,var(--yellow) 15%,transparent);color:var(--yellow)}
+.tplus{background:color-mix(in srgb,var(--accent2) 15%,transparent);color:var(--accent2)}
+.tms{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+.tm{background:color-mix(in srgb,var(--accent) 8%,transparent);color:color-mix(in srgb,var(--accent) 80%,white)}
+.ts{background:color-mix(in srgb,var(--accent2) 8%,transparent);color:var(--accent2)}
+
+.count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;
+  border-radius:11px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;
+  background:var(--s5-bg);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.count-badge.c1{animation:flash-slow 2s infinite}
+.count-badge.c2{animation:flash-med 1.5s infinite}
+.count-badge.c3{animation:flash-fast 1s infinite}
+.count-badge.c4{animation:flash-vfast 0.6s infinite}
+.count-badge.c5{animation:flash-vfast 0.4s infinite}
+@keyframes flash-slow{0%,100%{opacity:1;box-shadow:0 0 0 var(--glow)}50%{opacity:.6;box-shadow:0 0 8px var(--glow)}}
+@keyframes flash-med{0%,100%{opacity:1;box-shadow:0 0 0 var(--glow)}50%{opacity:.5;box-shadow:0 0 10px var(--glow)}}
+@keyframes flash-fast{0%,100%{opacity:1;box-shadow:0 0 0 var(--glow)}50%{opacity:.4;box-shadow:0 0 14px var(--glow)}}
+@keyframes flash-vfast{0%,100%{opacity:1;box-shadow:0 0 0 var(--glow)}50%{opacity:.3;box-shadow:0 0 18px var(--glow)}}
+
+.tip{position:relative;cursor:default}
+.tip:hover .tipb{opacity:1;pointer-events:auto}
+.tipb{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:7px 11px;
+  font-size:10px;font-family:'DM Sans',sans-serif;color:var(--white);white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s;z-index:200}
+
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty .ei{font-size:38px;margin-bottom:10px;opacity:.45}
+.empty h3{font-size:15px;color:var(--muted2);margin-bottom:6px}
+.empty p{font-size:12px;line-height:1.7}
+
+.sec-title{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:2px;
+  color:var(--accent);text-transform:uppercase;margin:24px 0 12px;display:flex;align-items:center;gap:8px}
+.sec-title .badge{font-size:9px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+  padding:2px 6px;color:var(--muted2)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+@media(max-width:600px){header,main{padding:12px}.stats-row{grid-template-columns:repeat(2,1fr)}.time-row{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SCREENER SCALPING<span>IHSG · INTRADAY SCANNER v3.0</span></div>
+  <div class="header-right">
+    <div class="theme-sw">
+      <label>TEMA</label>
+      <div class="tdot active" data-t="night" title="Night" onclick="setTheme('night')"></div>
+      <div class="tdot" data-t="light" title="Light" onclick="setTheme('light')"></div>
+    </div>
+    <div class="live-badge">CIAJENG BOT</div>
+  </div>
+</header>
+
+<main>
+
+  <div class="input-section">
+    <div class="sec-label">▸ Paste Data — 🍬 Top Gainer IHSG (proc18)</div>
+    <textarea id="dataInput" placeholder="Paste data top gainer di sini...
+Format: Ticker Current % valM vv1 chg [symbols]
+Symbols: ⭐ = bintang | * = daily open=low | + = weekly open=low | $ = kamehameha hourly | # = kamehameha 15min"></textarea>
+
+    <div class="time-row">
+      <div class="time-box">
+        <span class="tclk">🕑</span>
+        <input type="text" id="timeInput" class="time-inp" value="09:30" maxlength="5">
+        <button id="timeLockBtn" class="time-mode" onclick="toggleTimeLock()">🔓 AUTO</button>
+      </div>
+      <span class="time-hint">Enter = proses data · Klik 🔒 = edit manual · Klik 🔓 = auto-sync</span>
+    </div>
+
+    <div class="ic">
+      <button class="btn-p" onclick="processData()">▶ PROSES DATA</button>
+      <button class="btn-g" onclick="clearAll()">✕ CLEAR</button>
+      <button class="btn-g" onclick="loadSample()">⟳ CONTOH</button>
+    </div>
+    <div class="leg-row">
+      <div class="leg-pill"><span class="pdot" style="background:var(--yellow)"></span>⭐ Frekuensi / Bintang</div>
+      <div class="leg-pill"><span class="pdot" style="background:var(--accent)"></span>* Daily Open = Low Seminggu</div>
+      <div class="leg-pill"><span class="pdot" style="background:var(--accent2)"></span>+ Weekly Open = Low 2 Minggu</div>
+      <div class="leg-pill"><span class="pdot" style="background:var(--red)"></span>$ Kamehameha Hourly</div>
+      <div class="leg-pill"><span class="pdot" style="background:var(--muted2)"></span># Kamehameha 15min</div>
+      <div class="leg-pill"><span class="pdot" style="background:var(--accent)"></span>🆕 Baris hijau = saham baru di scan ini</div>
+      <div class="leg-pill"><span class="pdot" style="background:var(--white)"></span>Klik header = sort · Enter = proses</div>
+    </div>
+  </div>
+
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="sc"><div class="v cg" id="s-total">0</div><div class="l">TOTAL SAHAM</div></div>
+    <div class="sc"><div class="v cy" id="s-star">0</div><div class="l">⭐ BINTANG</div></div>
+    <div class="sc"><div class="v cg" id="s-daily">0</div><div class="l">* DAILY LOW</div></div>
+    <div class="sc"><div class="v cb" id="s-weekly">0</div><div class="l">+ WEEKLY LOW</div></div>
+    <div class="sc"><div class="v cr" id="s-kh">0</div><div class="l">$ KAMEHAMEHA H</div></div>
+    <div class="sc"><div class="v cm" id="s-k15">0</div><div class="l"># KAMEHAMEHA 15</div></div>
+    <div class="sc"><div class="v cg" id="s-s5">0</div><div class="l">SCORE 5 IDEAL</div></div>
+    <div class="sc"><div class="v cb" id="s-new">0</div><div class="l">🆕 SAHAM BARU</div></div>
+  </div>
+
+  <div class="ctrl-row" id="ctrlRow" style="display:none">
+    <input class="sbox" id="searchBox" placeholder="🔍 Cari ticker..." oninput="applyAll()">
+    <div class="fg">
+      <button class="fbtn active" data-f="all" onclick="setFilter(this)">Semua</button>
+      <button class="fbtn" data-f="star" onclick="setFilter(this)">⭐ Bintang</button>
+      <button class="fbtn" data-f="daily" onclick="setFilter(this)">* Daily</button>
+      <button class="fbtn" data-f="weekly" onclick="setFilter(this)">+ Weekly</button>
+      <button class="fbtn" data-f="kh" onclick="setFilter(this)">$ Kamehameha</button>
+      <button class="fbtn" data-f="k15" onclick="setFilter(this)"># Kamehameha 15</button>
+      <button class="fbtn" data-f="new" onclick="setFilter(this)">🆕 Baru</button>
+      <button class="fbtn" data-f="s5" onclick="setFilter(this)">Score 5</button>
+      <button class="fbtn" data-f="s4" onclick="setFilter(this)">Score ≥4</button>
+      <button class="fbtn" data-f="green" onclick="setFilter(this)">Chg +</button>
+    </div>
+  </div>
+
+  <div class="sort-panel" id="sortPanel" style="display:none">
+    <span class="spl">SORT :</span>
+    <div class="chips" id="sortChips">
+      <span class="chip-empty">Klik header kolom untuk menambah urutan sort (maks. 4)</span>
+    </div>
+    <span class="shint">· Klik chip = balik arah · ✕ = hapus</span>
+    <button class="btn-g" style="padding:4px 10px;font-size:10px;margin-left:auto" onclick="clearSort()">Reset</button>
+  </div>
+
+  <div class="sec-title">📊 CURRENT SCAN <span class="badge" id="currentTimeBadge">--:--</span></div>
+  <div class="tw" id="tableWrapperCurrent">
+    <div class="empty"><div class="ei">📊</div>
+      <h3>Belum Ada Data</h3>
+      <p>Paste hasil <strong>🍬 Top Gainer IHSG</strong> dari bot CIAJENG,<br>lalu tekan <strong>Enter</strong> atau klik <strong>PROSES DATA</strong>.</p>
+    </div>
+  </div>
+
+  <div class="sec-title">💥 HISTORY — PERSISTENT <span class="badge" id="persistentCountBadge">0 saham</span></div>
+  <div class="ctrl-row" id="historyCtrlRow" style="display:none">
+    <div class="fg">
+      <button class="fbtn active" data-f="all" onclick="setHistoryFilter(this)">Semua</button>
+      <button class="fbtn" data-f="star" onclick="setHistoryFilter(this)">⭐ Bintang</button>
+      <button class="fbtn" data-f="daily" onclick="setHistoryFilter(this)">* Daily</button>
+      <button class="fbtn" data-f="weekly" onclick="setHistoryFilter(this)">+ Weekly</button>
+      <button class="fbtn" data-f="kh" onclick="setHistoryFilter(this)">$ Kamehameha</button>
+      <button class="fbtn" data-f="k15" onclick="setHistoryFilter(this)"># Kamehameha 15</button>
+      <button class="fbtn" data-f="s5" onclick="setHistoryFilter(this)">Score 5</button>
+      <button class="fbtn" data-f="s4" onclick="setHistoryFilter(this)">Score ≥4</button>
+    </div>
+  </div>
+  <div class="tw" id="tableWrapperPersistent">
+    <div class="empty"><div class="ei">💥</div>
+      <h3>Belum Ada History</h3>
+      <p>Data persistent akan muncul setelah scan kedua.<br>Saham yang tetap ada di scan terbaru akan masuk di sini.</p>
+    </div>
+  </div>
+
+  <div class="sec-title">✕ HISTORY — DROPPED OUT <span class="badge" id="droppedCountBadge">0 saham</span></div>
+  <div class="tw" id="tableWrapperDropped">
+    <div class="empty"><div class="ei">✕</div>
+      <h3>Belum Ada Yang Drop</h3>
+      <p>Saham yang pernah muncul tapi tidak ada di scan terbaru akan masuk di sini.</p>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── STATE ───────────────────────────────────────────
+let allRows=[],headers=[],activeFilter='all',sortStack=[];
+let historyData={persistent:[],dropped:[]},historyFilter='all',historySortStack=[];
+let timeLocked=false,timeInterval=null,currentScanTime='';
+let prevTickers=new Set();
+
+// ─── THEME ───────────────────────────────────────────
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  document.querySelectorAll('.tdot').forEach(d=>d.classList.toggle('active',d.dataset.t===t));
+  try{localStorage.setItem('screener-theme',t)}catch(e){}
+}
+(function(){try{setTheme(localStorage.getItem('screener-theme')||'night')}catch(e){setTheme('night')}})();
+
+// ─── TIME HANDLER ────────────────────────────────────
+function pad2(n){return String(n).padStart(2,'0')}
+function getNowTime(){const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes())}
+function updateTimeDisplay(){
+  if(!timeLocked)document.getElementById('timeInput').value=getNowTime();
+}
+function startTimeSync(){
+  updateTimeDisplay();
+  timeInterval=setInterval(updateTimeDisplay,1000);
+}
+function stopTimeSync(){if(timeInterval){clearInterval(timeInterval);timeInterval=null}}
+function toggleTimeLock(){
+  timeLocked=!timeLocked;
+  const btn=document.getElementById('timeLockBtn');
+  if(timeLocked){
+    btn.innerHTML='🔒 LOCKED';btn.classList.add('locked');
+    stopTimeSync();document.getElementById('timeInput').focus();
+  }else{
+    btn.innerHTML='🔓 AUTO';btn.classList.remove('locked');
+    startTimeSync();
+  }
+}
+document.getElementById('timeInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){e.preventDefault();processData();}
+});
+startTimeSync();
+
+// ─── HELPERS ─────────────────────────────────────────
+function pctVal(s){
+  if(!s||s==='-'||s==='')return null;
+  const n=parseFloat(s.replace(/[^0-9.\-]/g,''));
+  return isNaN(n)?null:n;
+}
+function numVal(s){
+  if(!s||s==='-'||s==='')return null;
+  const n=parseFloat(s.replace(/,/g,''));
+  return isNaN(n)?null:n;
+}
+
+// ─── SCORE ───────────────────────────────────────────
+function computeScore(f){
+  let s=0;
+  if(f.star)s+=1.5;
+  if(f.dailyLow)s+=0.5;
+  if(f.weeklyLow)s+=0.5;
+  if(f.kamehamehaH)s+=0.5;
+  if(f.kamehameha15)s+=0.5;
+  if(f.chgPositive)s+=0.5;
+  if(f.chgHigh)s+=0.5;
+  return Math.min(5,Math.round(s));
+}
+
+// ─── ANALYSE ROW ─────────────────────────────────────
+function analyzeRow(ticker, symbols, current, pct, valM, vv1, chg){
+  const f={};
+  f.rawCode=ticker;f.cleanCode=ticker;
+  f.star=symbols.includes('\u2B50')||symbols.includes('\u2B50\uFE0F');
+  f.dailyLow=symbols.includes('*');
+  f.weeklyLow=symbols.includes('+');
+  f.kamehamehaH=symbols.includes('$');
+  f.kamehameha15=symbols.includes('#');
+  f.current=numVal(current);
+  f.pct=pctVal(pct);
+  f.valM=numVal(valM);
+  f.vv1=numVal(vv1);
+  f.chg=numVal(chg);
+  f.chgPositive=f.chg!==null&&f.chg>0;
+  f.chgNegative=f.chg!==null&&f.chg<0;
+  f.chgHigh=f.chg!==null&&f.chg>=5;
+  f.chgVeryHigh=f.chg!==null&&f.chg>=10;
+  return f;
+}
+
+// ─── PARSE ───────────────────────────────────────────
+function parseRaw(raw){
+  const lines=raw.split('\n');
+  allRows=[];
+  headers=['SCORE','Ticker','\u2B50','*','+','$','#','Current','%','valM','vv1','chg','FirstSeen'];
+
+  for(let line of lines){
+    line=line.trim();
+    if(!line)continue;
+    if(/^\uD83C\uDF6C/.test(line))continue;
+    if(/^Ticker/.test(line))continue;
+    if(/^[-=]{3,}/.test(line))continue;
+    if(/^IHSG/.test(line))continue;
+    if(/^\*\s*=/.test(line))continue;
+    if(/^\+\s*=/.test(line))continue;
+    if(/^\$\s*=/.test(line))continue;
+    if(/^#\s*=/.test(line))continue;
+    if(/^\u2B50/.test(line))continue;
+
+    const tokens=line.split(/\s+/).filter(t=>t);
+    if(tokens.length<6)continue;
+
+    const ticker=tokens[0];
+    const current=tokens[1];
+    const pct=tokens[2];
+    const valM=tokens[3];
+    const vv1=tokens[4];
+
+    let chgStr='';
+    let rawSymbols=[];
+    let chgFound=false;
+
+    for(let i=5;i<tokens.length;i++){
+      const tok=tokens[i];
+      const numMatch=tok.match(/^(-?\d[\d,\.]*)/);
+      if(numMatch&&!chgFound){
+        chgStr=numMatch[1];
+        chgFound=true;
+        const symPart=tok.substring(numMatch[1].length);
+        if(symPart)rawSymbols.push(symPart);
+      }else{
+        rawSymbols.push(tok);
+      }
+    }
+
+    const symbols=[];
+    rawSymbols.forEach(rs=>{
+      for(let c of rs){
+        if(['*','+','$','#'].includes(c))symbols.push(c);
+        else if(c==='\u2B50'||c==='\u2B50\uFE0F'){if(!symbols.includes('\u2B50'))symbols.push('\u2B50');}
+      }
+    });
+
+    const flags=analyzeRow(ticker,symbols,current,pct,valM,vv1,chgStr||'-');
+    const score=computeScore(flags);
+
+    const cols=[
+      String(score),ticker,
+      flags.star?'\u2B50':'',
+      flags.dailyLow?'*':'',
+      flags.weeklyLow?'+':'',
+      flags.kamehamehaH?'$':'',
+      flags.kamehameha15?'#':'',
+      current,pct,valM,vv1,chgStr||'-',
+      currentScanTime
+    ];
+
+    allRows.push({cols,flags,score,rawCode:ticker,isNew:!prevTickers.has(ticker)});
+  }
+}
+
+// ─── BUILD HISTORY ───────────────────────────────────
+function buildHistory(){
+  const currentTickers=new Set(allRows.map(r=>r.rawCode));
+
+  // Update persistent: keep existing + add current that were seen before
+  const newPersistent=[];
+  allRows.forEach(r=>{
+    if(prevTickers.has(r.rawCode)){
+      const existing=historyData.persistent.find(p=>p.rawCode===r.rawCode);
+      const count=(existing?existing.count:0)+1;
+      newPersistent.push({...r,count:count,lastSeen:currentScanTime});
+    }
+  });
+  // Keep persistent that are still in current
+  historyData.persistent.forEach(p=>{
+    if(currentTickers.has(p.rawCode)&&!newPersistent.find(np=>np.rawCode===p.rawCode)){
+      newPersistent.push({...p,count:p.count+1,lastSeen:currentScanTime});
+    }
+  });
+  historyData.persistent=newPersistent;
+
+  // Dropped: were in prev or persistent but NOT in current
+  const dropped=[];
+  const allPrev=[...prevTickers];
+  allPrev.forEach(t=>{
+    if(!currentTickers.has(t)){
+      const fromPersistent=historyData.persistent.find(p=>p.rawCode===t);
+      const fromCurrent=allRows.find(r=>r.rawCode===t);
+      if(fromPersistent){
+        dropped.push({...fromPersistent,type:'dropped'});
+      }else if(fromCurrent){
+        dropped.push({...fromCurrent,type:'dropped',count:1,lastSeen:currentScanTime});
+      }
+    }
+  });
+  historyData.dropped=dropped;
+
+  // Update prevTickers
+  prevTickers=new Set([...prevTickers,...currentTickers]);
+}
+
+// ─── RENDER TABLE 1: CURRENT ─────────────────────────
+const HINTS={
+  'SCORE':'Total score · 5=ideal',
+  'TICKER':'Kode saham',
+  '\u2B50':'Frekuensi / Bintang',
+  '*':'Daily open = low seminggu terakhir',
+  '+':'Weekly open = low 2 minggu terakhir',
+  '$':'Kamehameha hourly',
+  '#':'Kamehameha 15min',
+  'CURRENT':'Harga saat ini',
+  '%':'Persentase perubahan harga',
+  'VALM':'Value transaksi (jutaan)',
+  'VV1':'Volume ratio',
+  'CHG':'Perubahan harga (poin)',
+  'FIRSTSEEN':'Jam pertama kali saham ini muncul hari ini'
+};
+
+function renderCurrentTable(rows){
+  if(!rows.length){
+    document.getElementById('tableWrapperCurrent').innerHTML=`
+      <div class="empty"><div class="ei">\uD83D\uDD0D</div>
+      <h3>Tidak Ada Hasil</h3><p>Coba ubah filter atau kata kunci pencarian.</p></div>`;
+    return;
+  }
+
+  let th='';
+  headers.forEach((h,i)=>{
+    const up=h.toUpperCase(),si=sortStack.find(s=>s.col===i),hint=HINTS[up]||'';
+    const inner=hint?`<span class="tip">${h}<div class="tipb">${hint}</div></span>`:h;
+    th+=`<th onclick="addSort(${i},'${h}')">${inner}${si?`<span class="snum">${sortStack.indexOf(si)+1}</span><span class="sarr">${si.dir===-1?'\u2193':'\u2191'}</span>`:''}</th>`;
+  });
+
+  let tbody='';
+  rows.forEach(row=>{
+    const f=row.flags,sc=row.score;
+    const rc=row.isNew?'new-row':(sc>=5?'rs5':sc>=4?'rs4':sc>=3?'rs3':'rs2');
+    const scls=['','sb1','sb2','sb3','sb4','sb5'][Math.max(1,Math.min(5,sc))];
+    let cells='';
+
+    row.cols.forEach((val,i)=>{
+      val=val||'';
+      const h=(headers[i]||'').toUpperCase();
+      let html=val,cls='';
+
+      if(h==='SCORE'){html=`<span class="sbadge ${scls}">${sc}</span>`;cells+=`<td>${html}</td>`;return;}
+      if(h==='TICKER'){
+        let newTag=row.isNew?`<span class="tag tms">\uD83C\uDD95</span>`:'';
+        html=`<strong style="color:var(--white)">${val}</strong>${newTag}`;
+        cells+=`<td>${html}</td>`;return;
+      }
+      if(h==='\u2B50'){if(val){cls='cy2';html='\u2B50';}else{html='';}cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='*'){if(val){cls='cg2';html='*';}else{html='';}cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='+'){if(val){cls='cb2';html='+';}else{html='';}cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='$'){if(val){cls='cr2';html='$';}else{html='';}cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='#'){if(val){cls='cm2';html='#';}else{html='';}cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='CURRENT'){const n=numVal(val);if(n!==null)html=n.toLocaleString('id-ID');cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='%'){const n=pctVal(val);if(n!==null){cls=n>0?'cg2':n<0?'cr2':'cm2';html=(n>0?'+':'')+n+'%';}cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='CHG'){const n=numVal(val);if(n!==null){cls=n>0?'cg2':n<0?'cr2':'cm2';html=(n>0?'+':'')+n;if(f.chgVeryHigh)html+=' \uD83D\uDD25';else if(f.chgHigh)html+=' \u2191';}cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='VALM'||h==='VV1'){const n=numVal(val);if(n!==null){html=n.toLocaleString('id-ID');if(h==='VALM'&&n>=20)cls='cg2';if(h==='VV1'&&n>=10)cls='cg2';}cells+=`<td class="${cls}">${html}</td>`;return;}
+      if(h==='FIRSTSEEN'){html=`<span class="cm2">${val}</span>`;cells+=`<td class="${cls}">${html}</td>`;return;}
+
+      cells+=`<td class="${cls}">${html}</td>`;
+    });
+    tbody+=`<tr class="${rc}">${cells}</tr>`;
+  });
+
+  document.getElementById('tableWrapperCurrent').innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${tbody}</tbody></table>`;
+}
+
+// ─── RENDER TABLE 2A: PERSISTENT ─────────────────────
+const HIST_HEADERS=['Ticker','\u2B50','*','+','$','#','Current','%','valM','vv1','chg','Score','Count','LastSeen'];
+const HIST_HINTS={
+  'TICKER':'Kode saham','\u2B50':'Frekuensi','*':'Daily low','+':'Weekly low','$':'Kamehameha H','#':'Kamehameha 15',
+  'CURRENT':'Harga terakhir','%':'% change','VALM':'Value','VV1':'Volume','CHG':'Chg poin',
+  'SCORE':'Score terakhir','COUNT':'Berapa kali muncul hari ini','LASTSEEN':'Jam terakhir muncul'
+};
+
+function renderPersistentTable(rows){
+  if(!rows.length){
+    document.getElementById('tableWrapperPersistent').innerHTML=`
+      <div class="empty"><div class="ei">\uD83D\uDCA5</div>
+      <h3>Belum Ada History</h3><p>Data persistent akan muncul setelah scan kedua.</p></div>`;
+    return;
+  }
+
+  let th='';
+  HIST_HEADERS.forEach((h,i)=>{
+    const up=h.toUpperCase(),si=historySortStack.find(s=>s.col===i),hint=HIST_HINTS[up]||'';
+    const inner=hint?`<span class="tip">${h}<div class="tipb">${hint}</div></span>`:h;
+    th+=`<th onclick="addHistorySort(${i},'${h}')">${inner}${si?`<span class="snum">${historySortStack.indexOf(si)+1}</span><span class="sarr">${si.dir===-1?'\u2193':'\u2191'}</span>`:''}</th>`;
+  });
+
+  let tbody='';
+  rows.forEach(row=>{
+    const f=row.flags,sc=row.score;
+    const scls=['','sb1','sb2','sb3','sb4','sb5'][Math.max(1,Math.min(5,sc))];
+    const countClass=Math.min(5,Math.max(1,row.count||1));
+    let cells=`<td><strong style="color:var(--white)">${row.rawCode}</strong></td>`;
+
+    cells+=`<td class="${f.star?'cy2':''}">${f.star?'\u2B50':''}</td>`;
+    cells+=`<td class="${f.dailyLow?'cg2':''}">${f.dailyLow?'*':''}</td>`;
+    cells+=`<td class="${f.weeklyLow?'cb2':''}">${f.weeklyLow?'+':''}</td>`;
+    cells+=`<td class="${f.kamehamehaH?'cr2':''}">${f.kamehamehaH?'$':''}</td>`;
+    cells+=`<td class="${f.kamehameha15?'cm2':''}">${f.kamehameha15?'#':''}</td>`;
+
+    const cur=numVal(row.cols[7]||'');cells+=`<td>${cur!==null?cur.toLocaleString('id-ID'):'-'}</td>`;
+    const pct=pctVal(row.cols[8]||'');cells+=`<td class="${pct!==null?(pct>0?'cg2':pct<0?'cr2':'cm2'):''}">${pct!==null?(pct>0?'+':'')+pct+'%':'-'}</td>`;
+    const vm=numVal(row.cols[9]||'');cells+=`<td class="${vm!==null&&vm>=20?'cg2':''}">${vm!==null?vm.toLocaleString('id-ID'):'-'}</td>`;
+    const v1=numVal(row.cols[10]||'');cells+=`<td class="${v1!==null&&v1>=10?'cg2':''}">${v1!==null?v1.toLocaleString('id-ID'):'-'}</td>`;
+    const chg=numVal(row.cols[11]||'');cells+=`<td class="${chg!==null?(chg>0?'cg2':chg<0?'cr2':'cm2'):''}">${chg!==null?(chg>0?'+':'')+chg:'-'}</td>`;
+
+    cells+=`<td><span class="sbadge ${scls}">${sc}</span></td>`;
+    cells+=`<td><span class="count-badge c${countClass}">${row.count||1}x</span></td>`;
+    cells+=`<td class="cm2">${row.lastSeen||'--:--'}</td>`;
+
+    tbody+=`<tr class="${sc>=5?'rs5':sc>=4?'rs4':sc>=3?'rs3':'rs2'}">${cells}</tr>`;
+  });
+
+  document.getElementById('tableWrapperPersistent').innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${tbody}</tbody></table>`;
+}
+
+// ─── RENDER TABLE 2B: DROPPED ────────────────────────
+function renderDroppedTable(rows){
+  if(!rows.length){
+    document.getElementById('tableWrapperDropped').innerHTML=`
+      <div class="empty"><div class="ei">\u2715</div>
+      <h3>Belum Ada Yang Drop</h3><p>Saham yang pernah muncul tapi tidak ada di scan terbaru akan masuk di sini.</p></div>`;
+    return;
+  }
+
+  let th='';
+  const dh=['Ticker','\u2B50','*','+','$','#','LastSeen','Count','Score'];
+  dh.forEach((h,i)=>{
+    const hint=HIST_HINTS[h.toUpperCase()]||'';
+    const inner=hint?`<span class="tip">${h}<div class="tipb">${hint}</div></span>`:h;
+    th+=`<th>${inner}</th>`;
+  });
+
+  let tbody='';
+  rows.forEach(row=>{
+    const f=row.flags,sc=row.score;
+    const scls=['','sb1','sb2','sb3','sb4','sb5'][Math.max(1,Math.min(5,sc))];
+    let cells=`<td><strong style="color:var(--white)">${row.rawCode}</strong></td>`;
+    cells+=`<td class="${f.star?'cy2':''}">${f.star?'\u2B50':''}</td>`;
+    cells+=`<td class="${f.dailyLow?'cg2':''}">${f.dailyLow?'*':''}</td>`;
+    cells+=`<td class="${f.weeklyLow?'cb2':''}">${f.weeklyLow?'+':''}</td>`;
+    cells+=`<td class="${f.kamehamehaH?'cr2':''}">${f.kamehamehaH?'$':''}</td>`;
+    cells+=`<td class="${f.kamehameha15?'cm2':''}">${f.kamehameha15?'#':''}</td>`;
+    cells+=`<td class="cr2">${row.lastSeen||'--:--'}</td>`;
+    cells+=`<td><span class="count-badge c${Math.min(5,row.count||1)}">${row.count||1}x</span></td>`;
+    cells+=`<td><span class="sbadge ${scls}">${sc}</span></td>`;
+    tbody+=`<tr class="rs1">${cells}</tr>`;
+  });
+
+  document.getElementById('tableWrapperDropped').innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${tbody}</tbody></table>`;
+}
+
+// ─── MULTI-SORT (Current) ────────────────────────────
+function addSort(col,label){
+  const idx=sortStack.findIndex(s=>s.col===col);
+  if(idx>=0)sortStack[idx].dir*=-1;
+  else{if(sortStack.length>=4)sortStack.shift();sortStack.push({col,dir:-1,label});}
+  renderChips();applyAll();
+}
+function removeSort(col){sortStack=sortStack.filter(s=>s.col!==col);renderChips();applyAll();}
+function clearSort(){sortStack=[];renderChips();applyAll();}
+
+function renderChips(){
+  const el=document.getElementById('sortChips');
+  if(!sortStack.length){el.innerHTML='<span class="chip-empty">Klik header kolom untuk menambah urutan sort (maks. 4)</span>';return;}
+  el.innerHTML=sortStack.map((s,i)=>`
+    <span class="chip" onclick="addSort(${s.col},'${s.label}')">
+      <span class="cpri">${i+1}</span>${s.label}<span class="cdir">${s.dir===-1?'\u2193':'\u2191'}</span>
+      <span class="cx" onclick="event.stopPropagation();removeSort(${s.col})">\u2715</span>
+    </span>`).join('');
+}
+
+function multiSort(rows){
+  if(!sortStack.length)return rows.sort((a,b)=>b.score-a.score);
+  return rows.sort((a,b)=>{
+    for(const{col,dir}of sortStack){
+      let va=a.cols[col]||'',vb=b.cols[col]||'';
+      const na=parseFloat(va.replace(/[^0-9.\-]/g,'')),nb=parseFloat(vb.replace(/[^0-9.\-]/g,''));
+      if(!isNaN(na)&&!isNaN(nb)){va=na;vb=nb;}
+      if(va<vb)return -1*dir;if(va>vb)return 1*dir;
+    }return 0;
+  });
+}
+
+// ─── MULTI-SORT (History) ───────────────────────────
+function addHistorySort(col,label){
+  const idx=historySortStack.findIndex(s=>s.col===col);
+  if(idx>=0)historySortStack[idx].dir*=-1;
+  else{if(historySortStack.length>=4)historySortStack.shift();historySortStack.push({col,dir:-1,label});}
+  applyHistory();
+}
+
+function historyMultiSort(rows){
+  if(!historySortStack.length)return rows.sort((a,b)=>b.score-a.score);
+  return rows.sort((a,b)=>{
+    for(const{col,dir}of historySortStack){
+      let va,vb;
+      if(col===11){va=a.score;vb=b.score;}
+      else if(col===12){va=a.count||0;vb=b.count||0;}
+      else if(col===13){va=a.lastSeen||'';vb=b.lastSeen||'';}
+      else{va=a.cols[col+1]||'';vb=b.cols[col+1]||'';}
+      const na=parseFloat(String(va).replace(/[^0-9.\-]/g,'')),nb=parseFloat(String(vb).replace(/[^0-9.\-]/g,''));
+      if(!isNaN(na)&&!isNaN(nb)){va=na;vb=nb;}
+      if(va<vb)return -1*dir;if(va>vb)return 1*dir;
+    }return 0;
+  });
+}
+
+// ─── FILTER (Current) ──────────────────────────────
+function setFilter(btn){
+  document.querySelectorAll('#ctrlRow .fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');activeFilter=btn.dataset.f;applyAll();
+}
+
+function applyAll(){
+  const q=(document.getElementById('searchBox')?.value||'').toUpperCase();
+  let rows=allRows.filter(r=>{
+    const code=r.flags.cleanCode.toUpperCase();
+    if(q&&!code.includes(q))return false;
+    if(activeFilter==='star')return r.flags.star;
+    if(activeFilter==='daily')return r.flags.dailyLow;
+    if(activeFilter==='weekly')return r.flags.weeklyLow;
+    if(activeFilter==='kh')return r.flags.kamehamehaH;
+    if(activeFilter==='k15')return r.flags.kamehameha15;
+    if(activeFilter==='new')return r.isNew;
+    if(activeFilter==='s5')return r.score>=5;
+    if(activeFilter==='s4')return r.score>=4;
+    if(activeFilter==='green')return r.flags.chgPositive;
+    return true;
+  });
+  renderCurrentTable(multiSort(rows));
+}
+
+// ─── FILTER (History) ──────────────────────────────
+function setHistoryFilter(btn){
+  document.querySelectorAll('#historyCtrlRow .fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');historyFilter=btn.dataset.f;applyHistory();
+}
+
+function applyHistory(){
+  let pRows=historyData.persistent,dRows=historyData.dropped;
+
+  if(historyFilter!=='all'){
+    const f=historyFilter;
+    const filterFn=r=>{
+      if(f==='star')return r.flags.star;
+      if(f==='daily')return r.flags.dailyLow;
+      if(f==='weekly')return r.flags.weeklyLow;
+      if(f==='kh')return r.flags.kamehamehaH;
+      if(f==='k15')return r.flags.kamehameha15;
+      if(f==='s5')return r.score>=5;
+      if(f==='s4')return r.score>=4;
+      return true;
+    };
+    pRows=pRows.filter(filterFn);
+    dRows=dRows.filter(filterFn);
+  }
+
+  renderPersistentTable(historyMultiSort(pRows));
+  renderDroppedTable(dRows);
+
+  document.getElementById('persistentCountBadge').textContent=pRows.length+' saham';
+  document.getElementById('droppedCountBadge').textContent=dRows.length+' saham';
+}
+
+// ─── PROCESS ─────────────────────────────────────────
+function processData(){
+  const raw=document.getElementById('dataInput').value;
+  if(!raw.trim()){alert('Data masih kosong!');return;}
+
+  currentScanTime=document.getElementById('timeInput').value;
+  document.getElementById('currentTimeBadge').textContent=currentScanTime;
+
+  parseRaw(raw);
+  if(!allRows.length){alert('Tidak ada data. Pastikan format paste sesuai.');return;}
+
+  buildHistory();
+  updateStats();applyAll();applyHistory();
+
+  ['statsRow','ctrlRow','sortPanel','historyCtrlRow'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='';
+  });
+}
+
+function updateStats(){
+  document.getElementById('s-total').textContent=allRows.length;
+  document.getElementById('s-star').textContent=allRows.filter(r=>r.flags.star).length;
+  document.getElementById('s-daily').textContent=allRows.filter(r=>r.flags.dailyLow).length;
+  document.getElementById('s-weekly').textContent=allRows.filter(r=>r.flags.weeklyLow).length;
+  document.getElementById('s-kh').textContent=allRows.filter(r=>r.flags.kamehamehaH).length;
+  document.getElementById('s-k15').textContent=allRows.filter(r=>r.flags.kamehameha15).length;
+  document.getElementById('s-s5').textContent=allRows.filter(r=>r.score>=5).length;
+  document.getElementById('s-new').textContent=allRows.filter(r=>r.isNew).length;
+}
+
+function clearAll(){
+  document.getElementById('dataInput').value='';
+  allRows=[];headers=[];sortStack=[];historySortStack=[];
+  historyData={persistent:[],dropped:[]};
+  prevTickers=new Set();
+  ['statsRow','ctrlRow','sortPanel','historyCtrlRow'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  document.getElementById('currentTimeBadge').textContent='--:--';
+  document.getElementById('persistentCountBadge').textContent='0 saham';
+  document.getElementById('droppedCountBadge').textContent='0 saham';
+
+  document.getElementById('tableWrapperCurrent').innerHTML=`
+    <div class="empty"><div class="ei">\uD83D\uDCCA</div>
+    <h3>Belum Ada Data</h3>
+    <p>Paste hasil <strong>\uD83C\uDF6C Top Gainer IHSG</strong> dari bot CIAJENG,<br>lalu tekan <strong>Enter</strong> atau klik <strong>PROSES DATA</strong>.</p></div>`;
+  document.getElementById('tableWrapperPersistent').innerHTML=`
+    <div class="empty"><div class="ei">\uD83D\uDCA5</div>
+    <h3>Belum Ada History</h3><p>Data persistent akan muncul setelah scan kedua.</p></div>`;
+  document.getElementById('tableWrapperDropped').innerHTML=`
+    <div class="empty"><div class="ei">\u2715</div>
+    <h3>Belum Ada Yang Drop</h3><p>Saham yang pernah muncul tapi tidak ada di scan terbaru akan masuk di sini.</p></div>`;
+}
+
+function loadSample(){
+  document.getElementById('dataInput').value=
+`\uD83C\uDF6C Top gainer IHSG (proc18)
+Ticker Current    %  valM vv1 chg
+  MIDI    322     2%   10   5  -4\u2B50     
+  OMED    250     2%    6   1  -1    #
+  VRNA     82     2%    0  13   3     
+  BANK    505     2%    1   3  -2 *   
+  ZONE    346     2%    0   1   1     
+  KEEN    925     2%   12   2   3\u2B50   $ 
+  KINO  1,160     2%    0   2   3 * $#
+  FLMC    170     2%    0   1  -1\u2B50    #
+  NEST    580     2%   20   8  19\u2B50    #
+  LUCY  1,625     2%    1   8   9 *   
+  SGRO  3,750     2%    0   1   2 *   
+  RUNS     85     2%    0   2   2     
+  CASH    240     2%    1   1   4\u2B50     
+  ISAP     31     2%    1   2   0     
+  ELPI  1,985     2%   51  31  23     
+  GSMF    138     2%    3   1   5\u2B50     
+  GRPM    302     2%    0   1  -1\u2B50     
+-------------------------------------
+  IHSG  6,715  6,743   -0.4% 
+* = saham ada di daily open = low seminggu terakhir
++ = saham ada di weekly open = low 2 minggu terakhir
+$ = saham ada kamehameha hourly
+# = saham ada kamehameha 15min`;
+  processData();
+}
+
+document.getElementById('dataInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();processData();}
+});
+</script>
+</body>
+</html>
